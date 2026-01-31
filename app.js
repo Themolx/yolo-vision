@@ -1,6 +1,6 @@
 /**
  * YOLO Vision 2.0 - Main Application
- * Browser-based object detection + segmentation with TensorFlow.js
+ * Brutalist black & white edition
  */
 
 class App {
@@ -10,7 +10,6 @@ class App {
         this.detector = new Detector();
         this.renderer = new Renderer(this.canvas);
 
-        // State
         this.isRunning = false;
         this.lastFrameTime = performance.now();
         this.frameCount = 0;
@@ -18,91 +17,69 @@ class App {
         this.detections = [];
         this.segmentation = null;
 
-        // DOM Elements
         this.elements = {
-            status: document.getElementById('status'),
             statusText: document.getElementById('statusText'),
+            statusDot: document.getElementById('statusDot'),
+            statusBadge: document.getElementById('statusBadge'),
             loadingOverlay: document.getElementById('loadingOverlay'),
             loadingText: document.getElementById('loadingText'),
             fpsValue: document.getElementById('fpsValue'),
             objectsValue: document.getElementById('objectsValue'),
             processValue: document.getElementById('processValue'),
-            modelValue: document.getElementById('modelValue'),
+            modelStatus: document.getElementById('modelStatus'),
             detectionsList: document.getElementById('detectionsList'),
-            settingsBtn: document.getElementById('settingsBtn'),
-            settingsPanel: document.getElementById('settingsPanel'),
             startBtn: document.getElementById('startBtn'),
-            fullscreenBtn: document.getElementById('fullscreenBtn'),
             videoContainer: document.getElementById('videoContainer')
         };
 
-        // Bind methods
         this.loop = this.loop.bind(this);
         this.handleKeyPress = this.handleKeyPress.bind(this);
 
-        // Initialize
         this.init();
     }
 
     async init() {
-        this.updateStatus('loading', 'Loading models...');
+        this.updateStatus('LOADING', false);
 
         try {
-            // Load models with progress updates
             await this.detector.load((msg) => {
-                this.elements.loadingText.textContent = msg;
+                this.elements.loadingText.textContent = msg.toUpperCase();
             });
 
-            this.elements.loadingText.textContent = 'Click Start to begin';
-            this.updateStatus('ready', 'Models ready');
-            this.elements.modelValue.textContent = 'COCO + BodyPix';
+            this.elements.loadingText.textContent = 'READY';
+            this.updateStatus('READY', true);
+            this.elements.modelStatus.textContent = 'COCO-SSD + BODYPIX';
 
-            // Setup event listeners
             this.setupEventListeners();
 
         } catch (error) {
-            this.updateStatus('error', 'Failed to load');
-            this.elements.loadingText.textContent = 'Error: ' + error.message;
-            console.error('Initialization error:', error);
+            this.updateStatus('ERROR', false);
+            this.elements.loadingText.textContent = 'LOAD FAILED';
+            console.error('Init error:', error);
         }
     }
 
     setupEventListeners() {
-        // Start button
         this.elements.startBtn.addEventListener('click', () => this.toggleCamera());
 
-        // Settings toggle
-        this.elements.settingsBtn.addEventListener('click', () => {
-            this.elements.settingsPanel.classList.toggle('visible');
-        });
-
-        // Fullscreen
-        this.elements.fullscreenBtn.addEventListener('click', () => this.toggleFullscreen());
-
-        // Keyboard shortcuts
         document.addEventListener('keydown', this.handleKeyPress);
 
-        // Visualization mode buttons
-        document.querySelectorAll('[data-viz-mode]').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const mode = e.target.dataset.vizMode;
-                this.setVizMode(mode);
-            });
-        });
-
-        // Color mode buttons
-        document.querySelectorAll('[data-color-mode]').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const mode = e.target.dataset.colorMode;
-                this.setColorMode(mode);
-            });
-        });
-
-        // Detection mode buttons
+        // Mode buttons
         document.querySelectorAll('[data-detect-mode]').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const mode = e.target.dataset.detectMode;
                 this.setDetectMode(mode);
+                document.querySelectorAll('[data-detect-mode]').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+            });
+        });
+
+        document.querySelectorAll('[data-viz-mode]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const mode = e.target.dataset.vizMode;
+                this.renderer.updateSettings({ vizMode: mode });
+                document.querySelectorAll('[data-viz-mode]').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
             });
         });
 
@@ -125,6 +102,12 @@ class App {
             document.getElementById('thicknessValue').textContent = value + 'px';
         });
 
+        document.getElementById('smoothingSlider')?.addEventListener('input', (e) => {
+            const value = parseInt(e.target.value);
+            this.renderer.updateSettings({ smoothing: value });
+            document.getElementById('smoothingValue').textContent = value;
+        });
+
         // Color pickers
         document.getElementById('fillColorPicker')?.addEventListener('input', (e) => {
             this.renderer.updateSettings({ fillColor: e.target.value });
@@ -134,7 +117,15 @@ class App {
             this.renderer.updateSettings({ outlineColor: e.target.value });
         });
 
+        document.getElementById('bgColorPicker')?.addEventListener('input', (e) => {
+            this.renderer.updateSettings({ bgColor: e.target.value });
+        });
+
         // Toggles
+        document.getElementById('bgReplaceToggle')?.addEventListener('change', (e) => {
+            this.renderer.updateSettings({ bgReplace: e.target.checked });
+        });
+
         document.getElementById('personOnlyToggle')?.addEventListener('change', (e) => {
             this.detector.setPersonOnly(e.target.checked);
         });
@@ -142,58 +133,50 @@ class App {
         document.getElementById('showLabelsToggle')?.addEventListener('change', (e) => {
             this.renderer.updateSettings({ showLabels: e.target.checked });
         });
-
-        document.getElementById('segmentationToggle')?.addEventListener('change', (e) => {
-            const enabled = e.target.checked;
-            this.detector.setMode(enabled ? 'segmentation' : 'detection');
-            this.renderer.updateSettings({ segmentationMode: enabled });
-        });
     }
 
     handleKeyPress(e) {
         const key = e.key.toUpperCase();
 
-        // Preset keys
         if (['E', 'R', 'T', 'Z', 'U', 'I', 'O'].includes(key)) {
             const preset = this.renderer.applyPreset(key);
             if (preset) {
-                this.showNotification(`Preset: ${key}`);
-                this.updateModeButtons();
+                this.showNotification(key);
+                this.updateUI();
             }
         }
 
-        // Space to start/stop
         if (e.code === 'Space' && e.target === document.body) {
             e.preventDefault();
             this.toggleCamera();
         }
 
-        // Escape to exit fullscreen
-        if (e.key === 'Escape') {
-            if (document.fullscreenElement) {
-                document.exitFullscreen();
-            }
+        if (e.key === 'Escape' && document.fullscreenElement) {
+            document.exitFullscreen();
         }
 
-        // S for settings
-        if (key === 'S' && !e.ctrlKey && !e.metaKey) {
-            this.elements.settingsPanel.classList.toggle('visible');
-        }
-
-        // F for fullscreen
         if (key === 'F' && !e.ctrlKey && !e.metaKey) {
             this.toggleFullscreen();
         }
 
-        // M to toggle segmentation mode
         if (key === 'M' && !e.ctrlKey && !e.metaKey) {
-            const toggle = document.getElementById('segmentationToggle');
+            const isSegmentation = this.renderer.settings.segmentationMode;
+            const newMode = isSegmentation ? 'detection' : 'segmentation';
+            this.setDetectMode(newMode);
+
+            document.querySelectorAll('[data-detect-mode]').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.detectMode === newMode);
+            });
+
+            this.showNotification(newMode.toUpperCase());
+        }
+
+        if (key === 'B' && !e.ctrlKey && !e.metaKey) {
+            const toggle = document.getElementById('bgReplaceToggle');
             if (toggle) {
                 toggle.checked = !toggle.checked;
-                const enabled = toggle.checked;
-                this.detector.setMode(enabled ? 'segmentation' : 'detection');
-                this.renderer.updateSettings({ segmentationMode: enabled });
-                this.showNotification(enabled ? 'Segmentation ON' : 'Segmentation OFF');
+                this.renderer.updateSettings({ bgReplace: toggle.checked });
+                this.showNotification(toggle.checked ? 'BG ON' : 'BG OFF');
             }
         }
     }
@@ -201,13 +184,6 @@ class App {
     setDetectMode(mode) {
         this.detector.setMode(mode);
         this.renderer.updateSettings({ segmentationMode: mode === 'segmentation' });
-
-        document.querySelectorAll('[data-detect-mode]').forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.detectMode === mode);
-        });
-
-        const toggle = document.getElementById('segmentationToggle');
-        if (toggle) toggle.checked = mode === 'segmentation';
     }
 
     async toggleCamera() {
@@ -220,47 +196,33 @@ class App {
 
     async startCamera() {
         try {
-            this.elements.loadingText.textContent = 'Requesting camera access...';
+            this.elements.loadingText.textContent = 'CAMERA';
 
             const stream = await navigator.mediaDevices.getUserMedia({
-                video: {
-                    width: { ideal: 1280 },
-                    height: { ideal: 720 },
-                    facingMode: 'user'
-                }
+                video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' }
             });
 
             this.video.srcObject = stream;
             await this.video.play();
 
-            // Hide loading overlay
             this.elements.loadingOverlay.style.display = 'none';
-
-            // Update button
-            this.elements.startBtn.innerHTML = `
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="6" y="4" width="4" height="16"></rect>
-                    <rect x="14" y="4" width="4" height="16"></rect>
-                </svg>
-                Stop
-            `;
+            this.elements.startBtn.textContent = 'STOP';
 
             this.isRunning = true;
-            this.updateStatus('ready', 'Detecting');
+            this.updateStatus('LIVE', true);
+            this.elements.statusBadge.textContent = 'LIVE';
+            this.elements.statusBadge.classList.add('live');
 
             // Enable segmentation by default
             this.detector.setMode('segmentation');
             this.renderer.updateSettings({ segmentationMode: true });
-            const toggle = document.getElementById('segmentationToggle');
-            if (toggle) toggle.checked = true;
 
-            // Start detection loop
             this.loop();
 
         } catch (error) {
             console.error('Camera error:', error);
-            this.updateStatus('error', 'Camera denied');
-            this.elements.loadingText.textContent = 'Camera access denied. Please allow camera access.';
+            this.updateStatus('CAMERA DENIED', false);
+            this.elements.loadingText.textContent = 'CAMERA ACCESS DENIED';
         }
     }
 
@@ -274,16 +236,12 @@ class App {
 
         this.renderer.clear();
         this.elements.loadingOverlay.style.display = 'flex';
-        this.elements.loadingText.textContent = 'Click Start to begin';
+        this.elements.loadingText.textContent = 'STOPPED';
+        this.elements.startBtn.textContent = 'START';
+        this.elements.statusBadge.textContent = 'STOPPED';
+        this.elements.statusBadge.classList.remove('live');
 
-        this.elements.startBtn.innerHTML = `
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polygon points="5 3 19 12 5 21 5 3"></polygon>
-            </svg>
-            Start
-        `;
-
-        this.updateStatus('ready', 'Stopped');
+        this.updateStatus('STOPPED', false);
     }
 
     async loop() {
@@ -291,19 +249,15 @@ class App {
 
         const startTime = performance.now();
 
-        // Detect objects and segment
         const result = await this.detector.detect(this.video);
         this.detections = result.detections;
         this.segmentation = result.segmentation;
 
-        // Render frame with detections and segmentation
         this.renderer.render(this.video, this.detections, this.segmentation);
 
-        // Calculate stats
         const processTime = performance.now() - startTime;
         this.frameCount++;
 
-        // Update FPS every second
         const now = performance.now();
         if (now - this.lastFrameTime >= 1000) {
             this.fps = this.frameCount;
@@ -311,40 +265,33 @@ class App {
             this.lastFrameTime = now;
         }
 
-        // Update UI
         this.updateStats(processTime);
         this.updateDetectionsList();
 
-        // Next frame
         requestAnimationFrame(this.loop);
     }
 
     updateStats(processTime) {
         this.elements.fpsValue.textContent = this.fps;
         this.elements.objectsValue.textContent = this.detections.length;
-        this.elements.processValue.textContent = Math.round(processTime) + 'ms';
+        this.elements.processValue.textContent = Math.round(processTime);
     }
 
     updateDetectionsList() {
         const list = this.elements.detectionsList;
 
         if (this.detections.length === 0) {
-            list.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">No objects detected</p>';
+            list.innerHTML = '<div style="color: var(--muted); font-size: 10px;">NO OBJECTS</div>';
             return;
         }
 
         list.innerHTML = this.detections.map(det => {
-            const color = this.renderer.settings.colorMode === 'position'
-                ? this.renderer.getPositionColor(det.bbox.x, det.bbox.y, det.bbox.width, det.bbox.height)
-                : this.renderer.settings.outlineColor;
-
-            const hasSegmentation = det.class === 'person' && this.segmentation;
-
+            const hasSeg = det.class === 'person' && this.segmentation;
             return `
                 <div class="detection-item">
-                    <div class="detection-color" style="background: ${color}"></div>
+                    <div class="detection-color" style="background: ${this.renderer.settings.outlineColor}"></div>
                     <div class="detection-info">
-                        <div class="detection-class">${det.class} ${hasSegmentation ? '🎭' : ''}</div>
+                        <div class="detection-class">${det.class.toUpperCase()}${hasSeg ? ' [SEG]' : ''}</div>
                         <div class="detection-confidence">${Math.round(det.confidence * 100)}%</div>
                     </div>
                 </div>
@@ -352,28 +299,21 @@ class App {
         }).join('');
     }
 
-    updateStatus(type, text) {
-        this.elements.status.className = `status-badge ${type}`;
+    updateStatus(text, active) {
         this.elements.statusText.textContent = text;
+        this.elements.statusDot.classList.toggle('active', active);
     }
 
-    setVizMode(mode) {
-        this.renderer.updateSettings({ vizMode: mode });
-        this.updateModeButtons();
-    }
+    updateUI() {
+        // Update color pickers to match current settings
+        const fillPicker = document.getElementById('fillColorPicker');
+        const outlinePicker = document.getElementById('outlineColorPicker');
+        if (fillPicker) fillPicker.value = this.renderer.settings.fillColor;
+        if (outlinePicker) outlinePicker.value = this.renderer.settings.outlineColor;
 
-    setColorMode(mode) {
-        this.renderer.updateSettings({ colorMode: mode });
-        this.updateModeButtons();
-    }
-
-    updateModeButtons() {
+        // Update viz mode buttons
         document.querySelectorAll('[data-viz-mode]').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.vizMode === this.renderer.settings.vizMode);
-        });
-
-        document.querySelectorAll('[data-color-mode]').forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.colorMode === this.renderer.settings.colorMode);
         });
     }
 
@@ -394,23 +334,24 @@ class App {
             top: 20px;
             left: 50%;
             transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.8);
-            color: white;
+            background: #000;
+            color: #fff;
             padding: 12px 24px;
-            border-radius: 8px;
-            font-size: 14px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
             font-weight: 500;
+            letter-spacing: 2px;
+            border: 1px solid #fff;
             z-index: 10000;
-            animation: fadeInOut 1.5s ease forwards;
+            animation: fadeInOut 1s ease forwards;
         `;
         notification.textContent = message;
         document.body.appendChild(notification);
 
-        setTimeout(() => notification.remove(), 1500);
+        setTimeout(() => notification.remove(), 1000);
     }
 }
 
-// Add notification animation
 const style = document.createElement('style');
 style.textContent = `
     @keyframes fadeInOut {
@@ -422,7 +363,6 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
-// Initialize app when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
     window.app = new App();
 });

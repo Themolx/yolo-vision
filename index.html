@@ -4,246 +4,210 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>YOLO Vision 2.0 | Browser-Based Object Detection & Segmentation</title>
-    <meta name="description"
-        content="Real-time object detection and person segmentation running entirely in your browser using TensorFlow.js. No server required.">
-
-    <!-- Styles -->
+    <title>YOLO VISION</title>
     <link rel="stylesheet" href="styles.css">
-
-    <!-- TensorFlow.js -->
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js"></script>
-    <!-- COCO-SSD Model -->
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.2/dist/coco-ssd.min.js"></script>
-    <!-- BodyPix Model for Segmentation -->
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/body-pix@2.2.0/dist/body-pix.min.js"></script>
 </head>
 
 <body>
     <div class="app">
-        <!-- Header -->
-        <header class="header">
-            <div class="header-left">
-                <h1 class="logo">YOLO Vision</h1>
-                <span class="version">v2.0 BROWSER</span>
-                <div id="status" class="status-badge loading">
-                    <span class="status-dot"></span>
-                    <span id="statusText">Loading...</span>
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">YOLO VISION</div>
+                <div class="version">v2.0 / browser</div>
+            </div>
+
+            <!-- Controls -->
+            <div class="section">
+                <div class="section-title">Control</div>
+                <button id="startBtn" class="btn">START</button>
+            </div>
+
+            <!-- Mode -->
+            <div class="section">
+                <div class="section-title">Mode</div>
+                <div class="btn-row">
+                    <button class="btn" data-detect-mode="detection">DETECT</button>
+                    <button class="btn active" data-detect-mode="segmentation">SEGMENT</button>
                 </div>
             </div>
-            <div class="controls">
-                <button id="startBtn" class="btn btn-primary">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polygon points="5 3 19 12 5 21 5 3"></polygon>
-                    </svg>
-                    Start
-                </button>
-                <button id="settingsBtn" class="btn btn-secondary">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="12" cy="12" r="3"></circle>
-                        <path
-                            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
-                        </path>
-                    </svg>
-                    Settings
-                </button>
-            </div>
-        </header>
 
-        <!-- Main Content -->
-        <main class="main-content">
-            <!-- Video Section -->
-            <section class="video-section">
-                <div id="videoContainer" class="video-container">
-                    <video id="videoElement" playsinline muted></video>
-                    <canvas id="canvas"></canvas>
-
-                    <!-- Loading Overlay -->
-                    <div id="loadingOverlay" class="loading-overlay">
-                        <div class="loading-spinner"></div>
-                        <p id="loadingText" class="loading-text">Loading TensorFlow.js...</p>
-                    </div>
-
-                    <!-- Video Overlay -->
-                    <div class="video-overlay">
-                        <span class="overlay-badge live-badge">● LIVE</span>
-                    </div>
-
-                    <!-- Fullscreen Button -->
-                    <button id="fullscreenBtn" class="fullscreen-btn">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path
-                                d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3">
-                            </path>
-                        </svg>
-                    </button>
+            <!-- Visualization -->
+            <div class="section">
+                <div class="section-title">Visualization</div>
+                <div class="btn-row">
+                    <button class="btn active" data-viz-mode="both">BOTH</button>
+                    <button class="btn" data-viz-mode="fill">FILL</button>
+                    <button class="btn" data-viz-mode="outline">OUTLINE</button>
                 </div>
+            </div>
 
-                <!-- Stats Grid -->
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-label">FPS</div>
+            <!-- Colors -->
+            <div class="section">
+                <div class="section-title">Colors</div>
+                <div class="color-row">
+                    <span class="color-label">Fill</span>
+                    <input type="color" id="fillColorPicker" class="color-picker" value="#ffffff">
+                </div>
+                <div class="color-row">
+                    <span class="color-label">Outline</span>
+                    <input type="color" id="outlineColorPicker" class="color-picker" value="#ffffff">
+                </div>
+                <div class="color-row">
+                    <span class="color-label">Background</span>
+                    <input type="color" id="bgColorPicker" class="color-picker" value="#000000">
+                </div>
+            </div>
+
+            <!-- Parameters -->
+            <div class="section">
+                <div class="section-title">Parameters</div>
+                <div class="slider-row">
+                    <div class="slider-header">
+                        <span class="slider-label">Confidence</span>
+                        <span id="confidenceValue" class="slider-value">0.50</span>
+                    </div>
+                    <input type="range" id="confidenceSlider" class="slider" min="0" max="1" step="0.05" value="0.5">
+                </div>
+                <div class="slider-row">
+                    <div class="slider-header">
+                        <span class="slider-label">Opacity</span>
+                        <span id="opacityValue" class="slider-value">50%</span>
+                    </div>
+                    <input type="range" id="opacitySlider" class="slider" min="0" max="1" step="0.1" value="0.5">
+                </div>
+                <div class="slider-row">
+                    <div class="slider-header">
+                        <span class="slider-label">Outline</span>
+                        <span id="thicknessValue" class="slider-value">3px</span>
+                    </div>
+                    <input type="range" id="thicknessSlider" class="slider" min="1" max="10" step="1" value="3">
+                </div>
+                <div class="slider-row">
+                    <div class="slider-header">
+                        <span class="slider-label">Smoothing</span>
+                        <span id="smoothingValue" class="slider-value">2</span>
+                    </div>
+                    <input type="range" id="smoothingSlider" class="slider" min="0" max="10" step="1" value="2">
+                </div>
+            </div>
+
+            <!-- Toggles -->
+            <div class="section">
+                <div class="section-title">Options</div>
+                <div class="toggle-row">
+                    <span class="toggle-label">Background Replace</span>
+                    <label class="toggle">
+                        <input type="checkbox" id="bgReplaceToggle">
+                        <div class="toggle-track">
+                            <div class="toggle-thumb"></div>
+                        </div>
+                    </label>
+                </div>
+                <div class="toggle-row">
+                    <span class="toggle-label">Person Only</span>
+                    <label class="toggle">
+                        <input type="checkbox" id="personOnlyToggle">
+                        <div class="toggle-track">
+                            <div class="toggle-thumb"></div>
+                        </div>
+                    </label>
+                </div>
+                <div class="toggle-row">
+                    <span class="toggle-label">Show Labels</span>
+                    <label class="toggle">
+                        <input type="checkbox" id="showLabelsToggle" checked>
+                        <div class="toggle-track">
+                            <div class="toggle-thumb"></div>
+                        </div>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Presets -->
+            <div class="section">
+                <div class="section-title">Presets</div>
+                <div class="keys">
+                    <div class="key"><span>E</span>Neon</div>
+                    <div class="key"><span>R</span>Red</div>
+                    <div class="key"><span>T</span>Matrix</div>
+                    <div class="key"><span>Z</span>Cyber</div>
+                    <div class="key"><span>U</span>White</div>
+                    <div class="key"><span>I</span>Dark</div>
+                    <div class="key"><span>O</span>Orange</div>
+                </div>
+            </div>
+
+            <!-- Stats -->
+            <div class="section">
+                <div class="section-title">Stats</div>
+                <div class="stats-row">
+                    <div class="stat">
                         <div id="fpsValue" class="stat-value">0</div>
+                        <div class="stat-label">FPS</div>
                     </div>
-                    <div class="stat-card">
-                        <div class="stat-label">Objects</div>
+                    <div class="stat">
                         <div id="objectsValue" class="stat-value">0</div>
+                        <div class="stat-label">OBJ</div>
                     </div>
-                    <div class="stat-card">
-                        <div class="stat-label">Process</div>
-                        <div id="processValue" class="stat-value">0ms</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-label">Model</div>
-                        <div id="modelValue" class="stat-value" style="font-size: 14px;">Loading...</div>
+                    <div class="stat">
+                        <div id="processValue" class="stat-value">0</div>
+                        <div class="stat-label">MS</div>
                     </div>
                 </div>
-            </section>
+            </div>
 
-            <!-- Sidebar -->
-            <aside class="sidebar">
-                <!-- Settings Panel -->
-                <div id="settingsPanel" class="glass-panel settings-panel">
-                    <h2 class="panel-title">Settings</h2>
+            <!-- Detections -->
+            <div class="section" style="flex: 1; overflow: hidden;">
+                <div class="section-title">Detections</div>
+                <div id="detectionsList" class="detections-list">
+                    <div style="color: var(--muted); font-size: 10px;">Waiting</div>
+                </div>
+            </div>
 
-                    <!-- Detection Mode -->
-                    <div class="settings-group">
-                        <div class="settings-label">Mode</div>
-                        <div class="mode-buttons">
-                            <button class="mode-btn" data-detect-mode="detection">Detection</button>
-                            <button class="mode-btn active" data-detect-mode="segmentation">Segmentation</button>
-                        </div>
-                    </div>
+            <!-- Keys -->
+            <div class="section">
+                <div class="section-title">Shortcuts</div>
+                <div class="keys">
+                    <div class="key"><span>SPACE</span>Start</div>
+                    <div class="key"><span>M</span>Mode</div>
+                    <div class="key"><span>F</span>Full</div>
+                    <div class="key"><span>B</span>BG</div>
+                </div>
+            </div>
+        </aside>
 
-                    <!-- Visualization Mode -->
-                    <div class="settings-group">
-                        <div class="settings-label">Visualization</div>
-                        <div class="mode-buttons">
-                            <button class="mode-btn active" data-viz-mode="both">Both</button>
-                            <button class="mode-btn" data-viz-mode="fill">Fill</button>
-                            <button class="mode-btn" data-viz-mode="outline">Outline</button>
-                        </div>
-                    </div>
+        <!-- Main -->
+        <main class="main">
+            <div id="videoContainer" class="video-container">
+                <video id="videoElement" playsinline muted></video>
+                <canvas id="canvas"></canvas>
 
-                    <!-- Color Mode -->
-                    <div class="settings-group">
-                        <div class="settings-label">Color Mode</div>
-                        <div class="mode-buttons">
-                            <button class="mode-btn active" data-color-mode="fixed">Fixed</button>
-                            <button class="mode-btn" data-color-mode="position">Position</button>
-                        </div>
-                    </div>
-
-                    <!-- Colors -->
-                    <div class="settings-group">
-                        <div class="color-row">
-                            <label>Fill Color</label>
-                            <input type="color" id="fillColorPicker" class="color-picker" value="#3b82f6">
-                        </div>
-                        <div class="color-row">
-                            <label>Outline Color</label>
-                            <input type="color" id="outlineColorPicker" class="color-picker" value="#2563eb">
-                        </div>
-                    </div>
-
-                    <!-- Confidence Slider -->
-                    <div class="settings-group">
-                        <div class="slider-row">
-                            <div class="slider-header">
-                                <span class="slider-label">Confidence</span>
-                                <span id="confidenceValue" class="slider-value">0.50</span>
-                            </div>
-                            <input type="range" id="confidenceSlider" class="slider" min="0" max="1" step="0.05"
-                                value="0.5">
-                        </div>
-                    </div>
-
-                    <!-- Opacity Slider -->
-                    <div class="settings-group">
-                        <div class="slider-row">
-                            <div class="slider-header">
-                                <span class="slider-label">Fill Opacity</span>
-                                <span id="opacityValue" class="slider-value">50%</span>
-                            </div>
-                            <input type="range" id="opacitySlider" class="slider" min="0" max="1" step="0.1"
-                                value="0.5">
-                        </div>
-                    </div>
-
-                    <!-- Thickness Slider -->
-                    <div class="settings-group">
-                        <div class="slider-row">
-                            <div class="slider-header">
-                                <span class="slider-label">Outline Thickness</span>
-                                <span id="thicknessValue" class="slider-value">3px</span>
-                            </div>
-                            <input type="range" id="thicknessSlider" class="slider" min="1" max="10" step="1" value="3">
-                        </div>
-                    </div>
-
-                    <!-- Toggles -->
-                    <div class="settings-group">
-                        <div class="toggle-row">
-                            <span class="toggle-label">Segmentation</span>
-                            <label class="toggle">
-                                <input type="checkbox" id="segmentationToggle" checked>
-                                <span class="toggle-slider"></span>
-                            </label>
-                        </div>
-                        <div class="toggle-row">
-                            <span class="toggle-label">Person Only</span>
-                            <label class="toggle">
-                                <input type="checkbox" id="personOnlyToggle">
-                                <span class="toggle-slider"></span>
-                            </label>
-                        </div>
-                        <div class="toggle-row">
-                            <span class="toggle-label">Show Labels</span>
-                            <label class="toggle">
-                                <input type="checkbox" id="showLabelsToggle" checked>
-                                <span class="toggle-slider"></span>
-                            </label>
-                        </div>
-                    </div>
-
-                    <!-- Keyboard Hints -->
-                    <div class="settings-group">
-                        <div class="settings-label">Presets</div>
-                        <div class="keyboard-hints">
-                            <div class="key-hint"><span class="key">E</span> Neon</div>
-                            <div class="key-hint"><span class="key">R</span> Red</div>
-                            <div class="key-hint"><span class="key">T</span> Matrix</div>
-                            <div class="key-hint"><span class="key">Z</span> Cyber</div>
-                            <div class="key-hint"><span class="key">U</span> White</div>
-                            <div class="key-hint"><span class="key">I</span> Dark</div>
-                            <div class="key-hint"><span class="key">O</span> Orange</div>
-                        </div>
-                    </div>
+                <div id="loadingOverlay" class="loading-overlay">
+                    <div class="loading-spinner"></div>
+                    <p id="loadingText" class="loading-text">Loading</p>
                 </div>
 
-                <!-- Detections Panel -->
-                <div class="glass-panel">
-                    <h2 class="panel-title">Detections</h2>
-                    <div id="detectionsList" class="detections-list">
-                        <p style="color: var(--text-muted); font-size: 13px;">Start camera to detect objects</p>
-                    </div>
+                <div class="video-overlay">
+                    <span id="statusBadge" class="overlay-badge">LOADING</span>
                 </div>
+            </div>
 
-                <!-- Shortcuts Panel -->
-                <div class="glass-panel">
-                    <h2 class="panel-title">Shortcuts</h2>
-                    <div class="keyboard-hints">
-                        <div class="key-hint"><span class="key">Space</span> Start/Stop</div>
-                        <div class="key-hint"><span class="key">S</span> Settings</div>
-                        <div class="key-hint"><span class="key">F</span> Fullscreen</div>
-                        <div class="key-hint"><span class="key">M</span> Toggle Seg</div>
-                    </div>
+            <div class="status-bar">
+                <div class="status-item">
+                    <div id="statusDot" class="status-dot"></div>
+                    <span id="statusText">INITIALIZING</span>
                 </div>
-            </aside>
+                <div class="status-item">
+                    <span id="modelStatus">COCO-SSD + BODYPIX</span>
+                </div>
+            </div>
         </main>
     </div>
 
-    <!-- Scripts -->
     <script src="detector.js"></script>
     <script src="renderer.js"></script>
     <script src="app.js"></script>
